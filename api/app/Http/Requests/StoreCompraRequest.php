@@ -6,23 +6,29 @@ use Illuminate\Foundation\Http\FormRequest;
 
 class StoreCompraRequest extends FormRequest
 {
-    /**
-     * Determine if the user is authorized to make this request.
-     */
     public function authorize(): bool
     {
-        return false;
+        return true;
     }
 
-    /**
-     * Get the validation rules that apply to the request.
-     *
-     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
-     */
     public function rules(): array
     {
         return [
-            //
+            'fornecedor' => ['required', 'string', 'min:2', 'max:150'],
+            'produtos'   => ['required', 'array', 'min:1'],
+
+            'produtos.*.id'             => ['required', 'integer', 'exists:produtos,id'],
+            'produtos.*.quantidade'     => ['required', 'integer', 'min:1', 'max:1000000'],
+            'produtos.*.preco_unitario' => ['required', 'numeric', 'min:0.01', 'max:100000000'],
+        ];
+    }
+
+    public function messages(): array
+    {
+        return [
+            'fornecedor.required' => 'Informe o fornecedor.',
+            'produtos.required'   => 'Informe ao menos um item.',
+            'produtos.min'        => 'Informe ao menos um item.',
         ];
     }
 }
