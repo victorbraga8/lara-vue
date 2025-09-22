@@ -56,16 +56,16 @@ function money(v?: string | number) {
 
     <!-- KPIs -->
     <div class="grid gap-4 md:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
-      <Card>
-        <CardHeader class="flex flex-row items-center justify-between pb-2">
-          <CardTitle class="text-sm font-medium">Receita (mês)</CardTitle>
-          <DollarSign class="h-4 w-4 text-muted-foreground" />
-        </CardHeader>
-        <CardContent>
-          <div class="text-2xl font-bold">{{ loading ? '...' : money(m?.revenue_month) }}</div>
-          <p class="text-xs text-muted-foreground">Vendas concluídas no mês</p>
-        </CardContent>
-      </Card>
+    <Card>
+      <CardHeader class="flex items-center justify-between pb-2 bg-accent/40 rounded-t-2xl">
+        <CardTitle class="text-sm font-medium">Receita (mês)</CardTitle>
+        <DollarSign class="h-4 w-4 text-primary" />
+      </CardHeader>
+      <CardContent>
+        <div class="text-2xl font-bold">{{ money(m?.revenue_month) }}</div>
+        <p class="text-xs text-muted-foreground">Vendas concluídas no mês</p>
+      </CardContent>
+    </Card>
 
       <Card>
         <CardHeader class="flex flex-row items-center justify-between pb-2">
