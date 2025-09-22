@@ -4,17 +4,14 @@ import { useRouter } from 'vue-router'
 import { toast } from 'vue-sonner'
 import { useQuery } from '@tanstack/vue-query'
 
-// serviço
 import { getOverview } from '@/services/metrics'
 
-// shadcn-vue
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 
-// ícones
 import {
   Package,
   ShoppingCart,
@@ -30,20 +27,21 @@ import {
 
 const router = useRouter()
 
-// Query: usa apenas queryKey/queryFn (opções globais vêm do QueryClient)
-const { data, isLoading, isError, error, refetch, isFetching } = useQuery<any>({
+const { data, isLoading, isFetching, refetch, error } = useQuery<any>({
   queryKey: ['metrics', 'overview'],
   queryFn: getOverview,
 })
 
-if (isError.value) {
-  toast.error((error.value as any)?.message || 'Falha ao carregar métricas')
-}
+import { watchEffect } from 'vue'
+watchEffect(() => {
+  if (error.value) {
+    const msg = error.value?.message || 'Falha ao carregar métricas'
+    toast.error(msg, { position: 'top-center' })
+  }
+})
 
-// m = dados (qualquer shape), com fallback {}
 const m = computed<any>(() => data.value ?? {})
 
-// helpers
 function go(path: string) {
   router.push(path)
 }
@@ -59,7 +57,6 @@ function int(v: any, alt = 0) {
 
 <template>
   <div class="p-6 space-y-6">
-    <!-- Header -->
     <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
       <div>
         <h1 class="text-2xl font-semibold tracking-tight">Dashboard</h1>
@@ -69,7 +66,6 @@ function int(v: any, alt = 0) {
         </p>
       </div>
 
-      <!-- Ações principais -->
       <div class="flex flex-wrap items-center gap-2">
         <Button class="gap-2" @click="go('/produtos')"><Package class="w-4 h-4" /> Produtos</Button>
         <Button variant="secondary" class="gap-2" @click="go('/compras')"><ShoppingCart class="w-4 h-4" /> Compras</Button>
@@ -83,10 +79,8 @@ function int(v: any, alt = 0) {
       </div>
     </div>
 
-    <!-- KPIs -->
     <div class="grid gap-4 md:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
-      <!-- Loading skeletons -->
-      <template v-if="isLoading">
+      <template v-if="isLoading || isFetching">
         <Card v-for="i in 4" :key="'kpi-skel-' + i" class="shadow-sm">
           <CardHeader class="pb-2 bg-accent/40 rounded-t-2xl">
             <Skeleton class="h-4 w-24" />
@@ -98,7 +92,6 @@ function int(v: any, alt = 0) {
         </Card>
       </template>
 
-      <!-- KPIs reais -->
       <template v-else>
         <Card class="shadow-sm">
           <CardHeader class="flex items-center justify-between pb-2 bg-accent/40 rounded-t-2xl">
@@ -146,9 +139,7 @@ function int(v: any, alt = 0) {
       </template>
     </div>
 
-    <!-- Cards secundários -->
     <div class="grid gap-4 md:gap-6 grid-cols-1 lg:grid-cols-3">
-      <!-- Resumo acumulado -->
       <Card class="lg:col-span-2 shadow-sm">
         <CardHeader class="pb-2">
           <div class="flex items-center justify-between">
@@ -158,7 +149,7 @@ function int(v: any, alt = 0) {
         </CardHeader>
         <Separator />
         <CardContent class="pt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <template v-if="isLoading">
+          <template v-if="isLoading || isFetching">
             <div class="rounded-xl border p-4">
               <Skeleton class="h-4 w-28 mb-2" />
               <Skeleton class="h-6 w-24" />
@@ -198,7 +189,6 @@ function int(v: any, alt = 0) {
         </CardContent>
       </Card>
 
-      <!-- Acesso rápido -->
       <Card class="shadow-sm">
         <CardHeader class="pb-2">
           <CardTitle class="text-base">Acesso rápido</CardTitle>
@@ -219,14 +209,6 @@ function int(v: any, alt = 0) {
           </Button>
         </CardContent>
       </Card>
-    </div>
-
-    <!-- Overlay sutil enquanto refetch em background -->
-    <div
-      v-if="isFetching && !isLoading"
-      class="fixed right-4 top-20 z-50 rounded-md border bg-background/90 backdrop-blur px-3 py-1 text-xs text-muted-foreground flex items-center gap-2 shadow-sm"
-    >
-      <Loader2 class="h-3.5 w-3.5 animate-spin" /> Atualizando…
     </div>
   </div>
 </template>
