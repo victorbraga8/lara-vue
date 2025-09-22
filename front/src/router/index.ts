@@ -14,7 +14,8 @@ const router = createRouter({
       name: 'about',
       component: () => import('../views/AboutView.vue'),
     },
-    { path: '/sandbox', name: 'sandbox', component: () => import('../views/Sandbox.vue') }
+    { path: '/sandbox', name: 'sandbox', component: () => import('../views/Sandbox.vue') },
+    { path: '/produtos', name: 'produtos', component: () => import('../views/ProdutosView.vue') },
   ],
 })
 
