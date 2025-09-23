@@ -1,10 +1,8 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query'
 import { toast } from 'vue-sonner'
-
 import { listarProdutos, criarProduto, type Produto, type NovoProduto } from '@/services/produtos'
-
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -12,22 +10,12 @@ import { Label } from '@/components/ui/label'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from '@/components/ui/dialog'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Skeleton } from '@/components/ui/skeleton'
-
 import { Loader2, RefreshCw, Plus } from 'lucide-vue-next'
 
 const open = ref(false)
 const qc = useQueryClient()
 
-// ------------------------------
-// LISTA (persistência via cache)
-// ------------------------------
-const {
-  data,
-  isLoading,
-  isFetching,
-  refetch,
-  error,
-} = useQuery<Produto[]>({
+const { data, isLoading, isFetching, refetch, error } = useQuery<Produto[]>({
   queryKey: ['produtos', 'list'],
   queryFn: listarProdutos,
 })
@@ -38,9 +26,6 @@ if (error.value) {
 
 const produtos = computed<Produto[]>(() => data?.value ?? [])
 
-// ------------------------------
-// FORM & MUTATION (create)
-// ------------------------------
 const form = ref<NovoProduto>({
   nome: '',
   preco_venda: 0,
@@ -48,9 +33,26 @@ const form = ref<NovoProduto>({
   estoque: undefined,
 })
 
-const resetForm = () => {
+const formErrors = ref<Record<string, string>>({})
+const generalError = ref<string>('')
+
+function resetForm() {
   form.value = { nome: '', preco_venda: 0, custo_medio: 0, estoque: undefined }
+  formErrors.value = {}
+  generalError.value = ''
 }
+
+function clearError(field: keyof NovoProduto) {
+  if (formErrors.value[field]) {
+    delete formErrors.value[field]
+  }
+  if (!Object.keys(formErrors.value).length) generalError.value = ''
+}
+
+watch(() => form.value.nome, () => clearError('nome'))
+watch(() => form.value.preco_venda, () => clearError('preco_venda'))
+watch(() => form.value.custo_medio, () => clearError('custo_medio'))
+watch(() => form.value.estoque, () => clearError('estoque'))
 
 const { mutateAsync: createProduct, isPending } = useMutation({
   mutationFn: (payload: NovoProduto) => criarProduto(payload),
@@ -58,40 +60,51 @@ const { mutateAsync: createProduct, isPending } = useMutation({
     toast.success(res?.message || 'Produto cadastrado', { position: 'top-center' })
     open.value = false
     resetForm()
-    // mantém a lista em cache e atualiza
     await qc.invalidateQueries({ queryKey: ['produtos', 'list'] })
   },
   onError: (e: any) => {
     const msg = e?.response?.data?.message || 'Erro ao cadastrar produto'
-    const errs = e?.response?.data?.errors
-    toast.error(Array.isArray(errs?.nome) ? `${msg}: ${errs.nome[0]}` : msg, { position: 'top-center' })
+    const errs = e?.response?.data?.errors || {}
+    generalError.value = msg
+    formErrors.value = {
+      nome: Array.isArray(errs?.nome) ? errs.nome[0] : '',
+      preco_venda: Array.isArray(errs?.preco_venda) ? errs.preco_venda[0] : '',
+      custo_medio: Array.isArray(errs?.custo_medio) ? errs.custo_medio[0] : '',
+      estoque: Array.isArray(errs?.estoque) ? errs.estoque[0] : '',
+    }
   },
 })
 
-async function submit() {
-  // validações simples antes de enviar
-  const nome = form.value.nome?.trim()
-  if (!nome || nome.length < 3) {
-    return toast.warning('Nome deve ter ao menos 3 caracteres', { position: 'top-center' })
-  }
-  if (Number(form.value.preco_venda) <= 0) {
-    return toast.warning('Preço de venda deve ser > 0', { position: 'top-center' })
-  }
-  if (Number(form.value.custo_medio) < 0) {
-    return toast.warning('Custo médio deve ser ≥ 0', { position: 'top-center' })
-  }
+function validateLocal(): boolean {
+  formErrors.value = {}
+  generalError.value = ''
+  const local: Record<string, string> = {}
 
+  const nome = form.value.nome?.trim()
+  if (!nome || nome.length < 3) local.nome = 'Nome deve ter ao menos 3 caracteres'
+  if (Number(form.value.preco_venda) <= 0) local.preco_venda = 'Preço de venda deve ser maior que 0'
+  if (Number(form.value.custo_medio) < 0) local.custo_medio = 'Custo médio deve ser maior ou igual a 0'
+
+  if (Object.keys(local).length) {
+    formErrors.value = local
+    generalError.value = 'Corrija os campos destacados para continuar'
+    return false
+  }
+  return true
+}
+
+async function submit() {
+  if (!validateLocal()) return
   const payload: NovoProduto = {
-    nome,
+    nome: form.value.nome.trim(),
     preco_venda: Number(form.value.preco_venda),
     custo_medio: Number(form.value.custo_medio),
     ...(form.value.estoque !== undefined &&
-      form.value.estoque !== null &&
-      String(form.value.estoque) !== ''
+    form.value.estoque !== null &&
+    String(form.value.estoque) !== ''
       ? { estoque: Number(form.value.estoque) }
       : {}),
   }
-
   await createProduct(payload)
 }
 
@@ -102,22 +115,26 @@ function money(n: number | string) {
 </script>
 
 <template>
-  <div class="p-6 space-y-6">
-    <div class="flex items-center justify-between">
+  <div class="p-4 sm:p-6 space-y-6">
+    <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       <h1 class="text-2xl font-semibold">Produtos</h1>
 
-      <div class="flex items-center gap-2">
-        <Button variant="outline" size="sm" class="gap-2" @click="refetch()" :disabled="isFetching">
+      <div class="flex flex-col sm:flex-row gap-2 sm:items-center">
+        <Button variant="outline" size="sm" class="gap-2 justify-center" @click="refetch()" :disabled="isFetching">
           <Loader2 v-if="isFetching" class="h-4 w-4 animate-spin" />
           <RefreshCw v-else class="h-4 w-4" />
-          Atualizar
+          <span class="sm:inline">Atualizar</span>
         </Button>
 
         <Dialog v-model:open="open">
           <DialogTrigger as-child>
-            <Button class="gap-2"><Plus class="h-4 w-4" /> Novo produto</Button>
+            <Button class="gap-2 justify-center">
+              <Plus class="h-4 w-4" />
+              <span>Novo produto</span>
+            </Button>
           </DialogTrigger>
-          <DialogContent class="sm:max-w-md">
+
+          <DialogContent class="w-[94vw] max-w-[94vw] sm:w-[600px] sm:max-w-[600px] md:w-[720px] md:max-w-[720px]">
             <DialogHeader>
               <DialogTitle>Cadastrar produto</DialogTitle>
             </DialogHeader>
@@ -125,9 +142,19 @@ function money(n: number | string) {
             <div class="grid gap-4 py-2">
               <div class="grid gap-2">
                 <Label for="nome">Nome</Label>
-                <Input id="nome" v-model="form.nome" placeholder="Ex.: Camiseta Básica" />
+                <Input
+                  id="nome"
+                  v-model="form.nome"
+                  placeholder="Ex.: Camiseta Básica"
+                  :aria-invalid="!!formErrors.nome"
+                />
+                <p v-if="formErrors.nome" class="text-sm text-destructive" aria-live="polite">
+                  {{ formErrors.nome }}
+                </p>
               </div>
-              <div class="grid grid-cols-2 gap-4">
+
+              <!-- UM POR LINHA (sempre) -->
+              <div class="grid grid-cols-1 gap-4">
                 <div class="grid gap-2">
                   <Label for="preco_venda">Preço de venda</Label>
                   <Input
@@ -135,8 +162,13 @@ function money(n: number | string) {
                     type="number"
                     step="0.01"
                     v-model="(form.preco_venda as any)"
+                    :aria-invalid="!!formErrors.preco_venda"
                   />
+                  <p v-if="formErrors.preco_venda" class="text-sm text-destructive" aria-live="polite">
+                    {{ formErrors.preco_venda }}
+                  </p>
                 </div>
+
                 <div class="grid gap-2">
                   <Label for="custo_medio">Custo médio</Label>
                   <Input
@@ -144,9 +176,14 @@ function money(n: number | string) {
                     type="number"
                     step="0.01"
                     v-model="(form.custo_medio as any)"
+                    :aria-invalid="!!formErrors.custo_medio"
                   />
+                  <p v-if="formErrors.custo_medio" class="text-sm text-destructive" aria-live="polite">
+                    {{ formErrors.custo_medio }}
+                  </p>
                 </div>
               </div>
+
               <div class="grid gap-2">
                 <Label for="estoque">Estoque (opcional)</Label>
                 <Input
@@ -154,11 +191,20 @@ function money(n: number | string) {
                   type="number"
                   v-model="(form.estoque as any)"
                   placeholder="Se vazio, API usa 1"
+                  :aria-invalid="!!formErrors.estoque"
                 />
+                <p v-if="formErrors.estoque" class="text-sm text-destructive" aria-live="polite">
+                  {{ formErrors.estoque }}
+                </p>
               </div>
             </div>
 
-            <DialogFooter>
+            <div v-if="generalError && Object.keys(formErrors).length"
+                 class="rounded-md border border-destructive/50 bg-destructive/10 text-destructive px-3 py-2 text-sm">
+              {{ generalError }}
+            </div>
+
+            <DialogFooter class="mt-2">
               <Button :disabled="isPending" @click="submit" class="gap-2">
                 <Loader2 v-if="isPending" class="h-4 w-4 animate-spin" />
                 <span v-else>Salvar</span>
@@ -170,11 +216,49 @@ function money(n: number | string) {
     </div>
 
     <Card>
-      <CardHeader>
+      <CardHeader class="py-3 sm:py-4">
         <CardTitle class="text-base">Lista de produtos</CardTitle>
       </CardHeader>
       <CardContent>
-        <div class="overflow-x-auto">
+        <!-- MOBILE: cards -->
+        <div class="grid gap-3 sm:hidden">
+          <template v-if="isLoading || isFetching">
+            <div v-for="i in 6" :key="'skel-m-'+i" class="rounded-lg border p-3">
+              <Skeleton class="h-4 w-40 mb-2" />
+              <div class="grid grid-cols-2 gap-2 text-sm">
+                <Skeleton class="h-4 w-24" />
+                <Skeleton class="h-4 w-24" />
+                <Skeleton class="h-4 w-20" />
+                <Skeleton class="h-4 w-12" />
+              </div>
+            </div>
+          </template>
+
+          <div v-else-if="!produtos.length" class="text-center text-muted-foreground py-4">
+            Nenhum produto.
+          </div>
+
+          <div v-else v-for="p in produtos" :key="'m-'+p.id" class="rounded-lg border p-3">
+            <div class="flex items-center justify-between">
+              <span class="text-xs text-muted-foreground">#{{ p.id }}</span>
+              <span class="text-xs">{{ p.estoque }} un.</span>
+            </div>
+            <h3 class="mt-1 font-medium text-base line-clamp-2">{{ p.nome }}</h3>
+            <div class="mt-2 grid grid-cols-2 gap-2 text-sm">
+              <div class="flex flex-col">
+                <span class="text-muted-foreground">Custo médio</span>
+                <span>{{ money(p.custo_medio) }}</span>
+              </div>
+              <div class="flex flex-col">
+                <span class="text-muted-foreground">Preço venda</span>
+                <span>{{ money(p.preco_venda) }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- DESKTOP: tabela -->
+        <div class="hidden sm:block overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
@@ -187,7 +271,6 @@ function money(n: number | string) {
             </TableHeader>
 
             <TableBody>
-              <!-- Skeletons no load inicial e no refetch -->
               <template v-if="isLoading || isFetching">
                 <TableRow v-for="i in 6" :key="'skel-'+i">
                   <TableCell><Skeleton class="h-4 w-10" /></TableCell>
@@ -205,11 +288,11 @@ function money(n: number | string) {
               </TableRow>
 
               <TableRow v-else v-for="p in produtos" :key="p.id">
-                <TableCell>{{ p.id }}</TableCell>
-                <TableCell class="font-medium">{{ p.nome }}</TableCell>
-                <TableCell>{{ money(p.custo_medio) }}</TableCell>
-                <TableCell>{{ money(p.preco_venda) }}</TableCell>
-                <TableCell>{{ p.estoque }}</TableCell>
+                <TableCell class="w-16">#{{ p.id }}</TableCell>
+                <TableCell class="font-medium max-w-[420px] truncate">{{ p.nome }}</TableCell>
+                <TableCell class="whitespace-nowrap">{{ money(p.custo_medio) }}</TableCell>
+                <TableCell class="whitespace-nowrap">{{ money(p.preco_venda) }}</TableCell>
+                <TableCell class="w-20">{{ p.estoque }}</TableCell>
               </TableRow>
             </TableBody>
           </Table>
