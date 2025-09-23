@@ -46,7 +46,7 @@ export type CancelVendaResponse = {
 type Paginated<T> = { data: T[] } & Record<string, unknown>
 
 export async function listarVendas(): Promise<Venda[]> {
-    const { data } = await api.get<Pagamento<Venda[]> | Paginated<Venda> | Venda[]>('/vendas' as any)
+    const { data } = await api.get<Venda[] | Paginated<Venda>>('/vendas')
     const body: any = data
     if (Array.isArray(body)) return body
     if (Array.isArray(body?.data)) return body.data

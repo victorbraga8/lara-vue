@@ -39,19 +39,16 @@ const pendingCancelId = ref<number | null>(null)
 const vendasQ = useQuery<VendaRow[]>({
   queryKey: ['vendas', 'list'],
   queryFn: listarVendas,
-  retry: 1,
+  retry: 0,
+  refetchOnWindowFocus: false,
+  refetchOnReconnect: false,
+  staleTime: 60_000,
   select: (res: any) => {
     const body = res ?? {}
     if (Array.isArray(body)) return body
     if (Array.isArray(body.data)) return body.data
     return []
   },
-})
-
-watchEffect(() => {
-  if (vendasQ.isError.value && (!vendasQ.data?.value || vendasQ.data?.value.length === 0)) {
-    toast.error((vendasQ.error.value as any)?.message || 'Falha ao carregar vendas', { position: 'top-center' })
-  }
 })
 const vendas = computed(() => vendasQ.data?.value ?? [])
 
@@ -62,7 +59,10 @@ const showSkeleton = computed(
 const produtosQ = useQuery<ProdutoOption[]>({
   queryKey: ['produtos', 'options'],
   queryFn: listarProdutos,
-  retry: 1,
+  retry: 0,
+  refetchOnWindowFocus: false,
+  refetchOnReconnect: false,
+  staleTime: 60_000,
   select: (res: any) => {
     const body = res ?? {}
     if (Array.isArray(body)) return body
@@ -72,19 +72,28 @@ const produtosQ = useQuery<ProdutoOption[]>({
 })
 const produtos = computed(() => produtosQ.data?.value ?? [])
 
-const vendaDetalheQ = useQuery<any>({
+const vendaDetalheQ = useQuery({
   queryKey: computed(() => ['vendas', 'byId', selectedId.value]),
   queryFn: () => obterVenda(selectedId.value as number),
-  enabled: computed(() => selectedId.value !== null),
-  retry: 1,
+  enabled: computed(() => openDetail.value && selectedId.value !== null),
+  retry: 0,
+  refetchOnWindowFocus: false,
+  refetchOnReconnect: false,
+  staleTime: 60_000,
 })
+const vendaDetalhe = computed<any>(() => vendaDetalheQ.data?.value ?? null)
+const detalhePending = computed(() => vendaDetalheQ.status.value === 'pending')
 
+watchEffect(() => {
+  if (vendasQ.isError.value && (!vendasQ.data?.value || vendasQ.data?.value.length === 0)) {
+    toast.error((vendasQ.error.value as any)?.message || 'Falha ao carregar vendas', { position: 'top-center' })
+  }
+})
 watchEffect(() => {
   if (vendaDetalheQ.isError.value) {
     toast.error((vendaDetalheQ.error.value as any)?.message || 'Falha ao carregar venda', { position: 'top-center' })
   }
 })
-
 watchEffect(() => {
   if (!openDetail.value) selectedId.value = null
 })
@@ -154,6 +163,7 @@ function openDetalhe(id: number) {
   selectedId.value = id
   openDetail.value = true
 }
+
 function confirmarCancelar(id: number) {
   if (confirm('Confirma cancelar esta venda?')) cancelMutation.mutate(id)
 }
@@ -338,7 +348,7 @@ function money(n: number | string | undefined) {
           <DialogTitle>Detalhes da venda {{ selectedId ?? '' }}</DialogTitle>
         </DialogHeader>
 
-        <div v-if="vendaDetalheQ.isLoading || vendaDetalheQ.isFetching" class="space-y-3">
+        <div v-if="detalhePending" class="space-y-3">
           <Skeleton class="h-4 w-56" />
           <Skeleton class="h-4 w-40" />
           <div class="grid gap-2">
@@ -350,10 +360,10 @@ function money(n: number | string | undefined) {
 
         <div v-else class="space-y-4">
           <div class="grid grid-cols-2 gap-3 text-sm">
-            <div><span class="text-muted-foreground">Cliente:</span> <span class="font-medium">{{ vendaDetalheQ.data?.value?.cliente }}</span></div>
-            <div><span class="text-muted-foreground">Data:</span> <span class="font-medium">{{ (vendaDetalheQ.data?.value?.created_at || vendaDetalheQ.data?.value?.data || '').toString().replace('T', ' ').slice(0, 19) }}</span></div>
-            <div><span class="text-muted-foreground">Total:</span> <span class="font-medium">{{ money(vendaDetalheQ.data?.value?.total) }}</span></div>
-            <div><span class="text-muted-foreground">Lucro:</span> <span class="font-medium">{{ money(vendaDetalheQ.data?.value?.lucro ?? vendaDetalheQ.data?.value?.profit) }}</span></div>
+            <div><span class="text-muted-foreground">Cliente:</span> <span class="font-medium">{{ vendaDetalhe?.cliente }}</span></div>
+            <div><span class="text-muted-foreground">Data:</span> <span class="font-medium">{{ (vendaDetalhe?.created_at || '').toString().replace('T', ' ').slice(0, 19) }}</span></div>
+            <div><span class="text-muted-foreground">Total:</span> <span class="font-medium">{{ money(vendaDetalhe?.total) }}</span></div>
+            <div><span class="text-muted-foreground">Lucro:</span> <span class="font-medium">{{ money(vendaDetalhe?.lucro) }}</span></div>
           </div>
 
           <div class="border rounded-lg overflow-hidden">
@@ -368,8 +378,8 @@ function money(n: number | string | undefined) {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                <TableRow v-for="(it, i) in (vendaDetalheQ.data?.value?.itens ?? vendaDetalheQ.data?.value?.produtos ?? [])" :key="i">
-                  <TableCell>{{ it.produto_id ?? it.id }}</TableCell>
+                <TableRow v-for="(it, i) in (vendaDetalhe?.itens ?? vendaDetalhe?.produtos ?? [])" :key="i">
+                  <TableCell>{{ it.produto_id }}</TableCell>
                   <TableCell>{{ it.quantidade }}</TableCell>
                   <TableCell>{{ money(it.preco_unitario) }}</TableCell>
                   <TableCell>{{ money(it.subtotal) }}</TableCell>
