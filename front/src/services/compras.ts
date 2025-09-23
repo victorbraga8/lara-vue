@@ -31,6 +31,12 @@ export type Compra = {
 
 type Paginated<T> = { data: T[] } & Record<string, unknown>
 
+export type ComprasPorFornecedor = {
+    fornecedor: string
+    total_compras: number
+    total_gasto?: number | string
+}
+
 export async function listarCompras(): Promise<Compra[]> {
     const { data } = await api.get<Compra[] | Paginated<Compra>>('/compras')
     const body: any = data
@@ -39,21 +45,33 @@ export async function listarCompras(): Promise<Compra[]> {
     return []
 }
 
-export async function obterCompra(id: number): Promise<Compra> {
-    const { data } = await api.get<Compra | { compra: Compra }>(`/compras/${id}`)
-    const body: any = data
-    return body?.compra ?? body
+export async function obterCompra(id: number | string): Promise<Compra> {
+    const intId = Number(id)
+
+    try {
+        const { data } = await api.get<Compra | { compra: Compra }>(`/compras/${intId}`)
+        const body: any = data
+        return body?.compra ?? body
+    } catch (e) {
+        try {
+            const { data } = await api.get<Compra | { compra: Compra }>('/compras/show', {
+                params: { id: intId },
+            })
+            const body: any = data
+            return body?.compra ?? body
+        } catch {
+            const { data } = await api.get<Compra | { compra: Compra }>('/compras', {
+                params: { id: intId },
+            })
+            const body: any = data
+            return body?.compra ?? body
+        }
+    }
 }
 
 export async function criarCompra(payload: NovaCompra) {
     const { data } = await api.post('/compras', payload)
     return data
-}
-
-export type ComprasPorFornecedor = {
-    fornecedor: string
-    total_compras: number
-    total_gasto?: number | string
 }
 
 export async function comprasPorFornecedor(): Promise<ComprasPorFornecedor[]> {

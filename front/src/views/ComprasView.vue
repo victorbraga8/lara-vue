@@ -21,6 +21,7 @@ type CompraRow = {
   fornecedor: string
   itens?: any[]
   produtos?: any[]
+  itens_count?: number
   total?: number | string
   created_at?: string
 }
@@ -34,7 +35,7 @@ const selectedId = ref<number | null>(null)
 
 const comprasQ = useQuery<CompraRow[]>({
   queryKey: ['compras', 'list'],
-  queryFn: listarCompras,
+  queryFn: () => listarCompras(),
   retry: 0,
   refetchOnWindowFocus: false,
   refetchOnReconnect: false,
@@ -162,6 +163,20 @@ function money(n: number | string | undefined) {
   const v = typeof n === 'string' ? Number(n) : (n ?? 0)
   return Number.isFinite(v) ? v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : '—'
 }
+
+const resumo = computed(() => {
+  const map = new Map<string, { fornecedor: string; total_compras: number; total_gasto: number }>()
+  for (const c of compras.value) {
+    const key = c.fornecedor || '—'
+    const cur = map.get(key) ?? { fornecedor: key, total_compras: 0, total_gasto: 0 }
+    cur.total_compras += 1
+    const t = typeof c.total === 'string' ? Number(c.total) : (c.total ?? 0)
+    cur.total_gasto += Number.isFinite(t) ? t : 0
+    map.set(key, cur)
+  }
+  return Array.from(map.values())
+})
+const resumoPending = computed(() => comprasQ.isPending.value || comprasQ.isFetching.value || refreshing.value)
 </script>
 
 <template>
@@ -260,6 +275,42 @@ function money(n: number | string | undefined) {
     </div>
 
     <Card>
+      <CardHeader class="pb-2">
+        <CardTitle class="text-base">Resumo — Compras por fornecedor</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div class="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Fornecedor</TableHead>
+                <TableHead class="whitespace-nowrap">Qtde compras</TableHead>
+                <TableHead class="whitespace-nowrap">Total gasto</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              <template v-if="resumoPending">
+                <TableRow v-for="i in 3" :key="'sk-r-'+i">
+                  <TableCell><Skeleton class="h-4 w-40" /></TableCell>
+                  <TableCell><Skeleton class="h-4 w-16" /></TableCell>
+                  <TableCell><Skeleton class="h-4 w-24" /></TableCell>
+                </TableRow>
+              </template>
+              <TableRow v-else-if="!resumo.length">
+                <TableCell colspan="3" class="text-center text-muted-foreground">Nenhum fornecedor encontrado.</TableCell>
+              </TableRow>
+              <TableRow v-else v-for="r in resumo" :key="r.fornecedor">
+                <TableCell class="font-medium">{{ r.fornecedor }}</TableCell>
+                <TableCell>{{ r.total_compras }}</TableCell>
+                <TableCell>{{ money(r.total_gasto) }}</TableCell>
+              </TableRow>
+            </TableBody>
+          </Table>
+        </div>
+      </CardContent>
+    </Card>
+
+    <Card>
       <CardHeader>
         <CardTitle class="text-base">Lista de compras</CardTitle>
       </CardHeader>
@@ -308,7 +359,7 @@ function money(n: number | string | undefined) {
                 <TableRow v-for="c in compras" :key="c.id">
                   <TableCell>{{ c.id }}</TableCell>
                   <TableCell class="font-medium">{{ c.fornecedor }}</TableCell>
-                  <TableCell>{{ c.itens?.length ?? c.produtos?.length ?? 0 }}</TableCell>
+                  <TableCell>{{ c.itens_count ?? (c.itens?.length ?? c.produtos?.length ?? 0) }}</TableCell>
                   <TableCell>{{ money(c.total) }}</TableCell>
                   <TableCell>{{ (c.created_at || '').toString().replace('T', ' ').slice(0, 19) }}</TableCell>
                   <TableCell class="flex gap-2">
