@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\ProdutoController;
 use App\Http\Controllers\CompraController;
 use App\Http\Controllers\VendaController;
+use App\Http\Controllers\MetricsController;
 
 Route::get('/health', fn () => response()->json(['message' => 'Endpoint funcionando']));
 
@@ -21,3 +22,6 @@ Route::get('/vendas', [VendaController::class, 'index']);
 Route::get('/vendas/{id}', [VendaController::class, 'show']);
 Route::post('/vendas', [VendaController::class, 'store']);
 Route::post('/vendas/{id}/cancelar', [VendaController::class, 'cancelar']);
+
+// Métricas
+Route::get('/metrics/overview', [MetricsController::class, 'overview']);
