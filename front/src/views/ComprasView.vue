@@ -3,7 +3,7 @@ import { computed, reactive, ref, watchEffect } from 'vue'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query'
 import { toast } from 'vue-sonner'
 
-import { listarVendas, criarVenda, obterVenda, cancelarVenda } from '@/services/vendas'
+import { listarCompras, criarCompra, obterCompra } from '@/services/compras'
 import { listarProdutos } from '@/services/produtos'
 
 import { Button } from '@/components/ui/button'
@@ -13,32 +13,28 @@ import { Label } from '@/components/ui/label'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from '@/components/ui/dialog'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Loader2, RefreshCw, Plus, Trash2, Eye, XCircle } from 'lucide-vue-next'
+import { Loader2, RefreshCw, Plus, Trash2, Eye } from 'lucide-vue-next'
 
-type ProdutoOption = { id: number; nome: string; preco_venda: number | string }
-type VendaRow = {
+type ProdutoOption = { id: number; nome: string; preco_venda?: number | string }
+type CompraRow = {
   id: number
-  cliente: string
-  produtos?: any[]
+  fornecedor: string
   itens?: any[]
+  produtos?: any[]
   total?: number | string
-  lucro?: number | string
   created_at?: string
-  data?: string
-  status?: string
 }
-type ItemVendaInput = { id: number; quantidade: number; preco_unitario: number }
-type NovaVenda = { cliente: string; produtos: ItemVendaInput[] }
+type ItemCompraInput = { id: number; quantidade: number; preco_unitario: number }
+type NovaCompra = { fornecedor: string; produtos: ItemCompraInput[] }
 
 const qc = useQueryClient()
 const open = ref(false)
 const openDetail = ref(false)
 const selectedId = ref<number | null>(null)
-const pendingCancelId = ref<number | null>(null)
 
-const vendasQ = useQuery<VendaRow[]>({
-  queryKey: ['vendas', 'list'],
-  queryFn: listarVendas,
+const comprasQ = useQuery<CompraRow[]>({
+  queryKey: ['compras', 'list'],
+  queryFn: listarCompras,
   retry: 0,
   refetchOnWindowFocus: false,
   refetchOnReconnect: false,
@@ -50,13 +46,13 @@ const vendasQ = useQuery<VendaRow[]>({
     return []
   },
 })
-const vendas = computed(() => vendasQ.data?.value ?? [])
+const compras = computed(() => comprasQ.data?.value ?? [])
 
 const refreshing = ref(false)
 async function refreshList() {
   refreshing.value = true
   try {
-    await vendasQ.refetch()
+    await comprasQ.refetch()
   } finally {
     refreshing.value = false
   }
@@ -64,9 +60,9 @@ async function refreshList() {
 
 const showSkeleton = computed(
   () =>
-    vendasQ.isPending.value ||
+    comprasQ.isPending.value ||
     refreshing.value ||
-    (vendasQ.isFetching.value && vendas.value.length === 0)
+    (comprasQ.isFetching.value && compras.value.length === 0)
 )
 
 const produtosQ = useQuery<ProdutoOption[]>({
@@ -85,33 +81,33 @@ const produtosQ = useQuery<ProdutoOption[]>({
 })
 const produtos = computed(() => produtosQ.data?.value ?? [])
 
-const vendaDetalheQ = useQuery({
-  queryKey: computed(() => ['vendas', 'byId', selectedId.value]),
-  queryFn: () => obterVenda(selectedId.value as number),
+const compraDetalheQ = useQuery({
+  queryKey: computed(() => ['compras', 'byId', selectedId.value]),
+  queryFn: () => obterCompra(selectedId.value as number),
   enabled: computed(() => openDetail.value && selectedId.value !== null),
   retry: 0,
   refetchOnWindowFocus: false,
   refetchOnReconnect: false,
   staleTime: 60_000,
 })
-const vendaDetalhe = computed<any>(() => vendaDetalheQ.data?.value ?? null)
-const detalhePending = computed(() => vendaDetalheQ.status.value === 'pending')
+const compraDetalhe = computed<any>(() => compraDetalheQ.data?.value ?? null)
+const detalhePending = computed(() => compraDetalheQ.status.value === 'pending')
 
 watchEffect(() => {
-  if (vendasQ.isError.value && (!vendasQ.data?.value || vendasQ.data?.value.length === 0)) {
-    toast.error((vendasQ.error.value as any)?.message || 'Falha ao carregar vendas', { position: 'top-center' })
+  if (comprasQ.isError.value && (!comprasQ.data?.value || comprasQ.data?.value.length === 0)) {
+    toast.error((comprasQ.error.value as any)?.message || 'Falha ao carregar compras', { position: 'top-center' })
   }
 })
 watchEffect(() => {
-  if (vendaDetalheQ.isError.value) {
-    toast.error((vendaDetalheQ.error.value as any)?.message || 'Falha ao carregar venda', { position: 'top-center' })
+  if (compraDetalheQ.isError.value) {
+    toast.error((compraDetalheQ.error.value as any)?.message || 'Falha ao carregar compra', { position: 'top-center' })
   }
 })
 watchEffect(() => {
   if (!openDetail.value) selectedId.value = null
 })
 
-const form = reactive<NovaVenda>({ cliente: '', produtos: [] })
+const form = reactive<NovaCompra>({ fornecedor: '', produtos: [] })
 
 function addItem() {
   form.produtos.push({ id: produtos.value[0]?.id ?? 0, quantidade: 1, preco_unitario: 0 })
@@ -120,44 +116,27 @@ function removeItem(i: number) {
   form.produtos.splice(i, 1)
 }
 
-const total = computed(() =>
+const totalForm = computed(() =>
   form.produtos.reduce((acc, it) => acc + Number(it.quantidade || 0) * Number(it.preco_unitario || 0), 0)
 )
 
 const createMutation = useMutation({
-  mutationFn: (payload: NovaVenda) => criarVenda(payload),
+  mutationFn: (payload: NovaCompra) => criarCompra(payload),
   onSuccess: async (res: any) => {
-    toast.success(res?.message || 'Venda registrada', { position: 'top-center' })
+    toast.success(res?.message || 'Compra registrada', { position: 'top-center' })
     open.value = false
-    form.cliente = ''
+    form.fornecedor = ''
     form.produtos = []
-    await qc.invalidateQueries({ queryKey: ['vendas', 'list'] })
+    await qc.invalidateQueries({ queryKey: ['compras', 'list'] })
     await qc.invalidateQueries({ queryKey: ['produtos'] })
   },
   onError: (e: any) => {
-    toast.error(e?.response?.data?.message || 'Erro ao registrar venda', { position: 'top-center' })
-  },
-})
-
-const cancelMutation = useMutation({
-  mutationFn: (id: number) => cancelarVenda(id),
-  onMutate: (id) => (pendingCancelId.value = id),
-  onSettled: () => (pendingCancelId.value = null),
-  onSuccess: async (res: any) => {
-    toast.success(res?.message || 'Venda cancelada', { position: 'top-center' })
-    await qc.invalidateQueries({ queryKey: ['vendas', 'list'] })
-    await qc.invalidateQueries({ queryKey: ['produtos'] })
-    if (selectedId.value) await qc.invalidateQueries({ queryKey: ['vendas', 'byId', selectedId.value] })
-    confirmOpen.value = false
-    vendaToCancel.value = null
-  },
-  onError: (e: any) => {
-    toast.error(e?.response?.data?.message || 'Erro ao cancelar venda', { position: 'top-center' })
+    toast.error(e?.response?.data?.message || 'Erro ao registrar compra', { position: 'top-center' })
   },
 })
 
 async function submit() {
-  if (!form.cliente?.trim()) return toast.warning('Informe o cliente', { position: 'top-center' })
+  if (!form.fornecedor?.trim()) return toast.warning('Informe o fornecedor', { position: 'top-center' })
   if (!form.produtos.length) return toast.warning('Adicione ao menos 1 item', { position: 'top-center' })
   for (const [idx, it] of form.produtos.entries()) {
     if (!it.id) return toast.warning(`Selecione o produto da linha ${idx + 1}`, { position: 'top-center' })
@@ -165,7 +144,7 @@ async function submit() {
     if (Number(it.preco_unitario) <= 0) return toast.warning(`Preço unitário inválido na linha ${idx + 1}`, { position: 'top-center' })
   }
   await createMutation.mutateAsync({
-    cliente: form.cliente.trim(),
+    fornecedor: form.fornecedor.trim(),
     produtos: form.produtos.map(p => ({
       id: Number(p.id),
       quantidade: Number(p.quantidade),
@@ -183,22 +162,12 @@ function money(n: number | string | undefined) {
   const v = typeof n === 'string' ? Number(n) : (n ?? 0)
   return Number.isFinite(v) ? v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : '—'
 }
-
-const confirmOpen = ref(false)
-const vendaToCancel = ref<{ id: number; cliente?: string } | null>(null)
-function solicitarCancelamento(v: VendaRow) {
-  vendaToCancel.value = { id: v.id, cliente: v.cliente }
-  confirmOpen.value = true
-}
-function confirmarCancelar() {
-  if (vendaToCancel.value) cancelMutation.mutate(vendaToCancel.value.id)
-}
 </script>
 
 <template>
   <div class="p-6 space-y-6">
     <div class="flex items-center justify-between">
-      <h1 class="text-2xl font-semibold">Vendas</h1>
+      <h1 class="text-2xl font-semibold">Compras</h1>
 
       <div class="flex items-center gap-2">
         <Button
@@ -215,18 +184,18 @@ function confirmarCancelar() {
 
         <Dialog v-model:open="open">
           <DialogTrigger as-child>
-            <Button class="gap-2 transition-colors hover:opacity-90"><Plus class="h-4 w-4" /> Registrar venda</Button>
+            <Button class="gap-2 transition-colors hover:opacity-90"><Plus class="h-4 w-4" /> Registrar compra</Button>
           </DialogTrigger>
 
           <DialogContent class="sm:max-w-2xl">
             <DialogHeader>
-              <DialogTitle>Registrar venda</DialogTitle>
+              <DialogTitle>Registrar compra</DialogTitle>
             </DialogHeader>
 
             <div class="grid gap-4 py-2">
               <div class="grid gap-2">
-                <Label for="cliente">Cliente</Label>
-                <Input id="cliente" v-model="form.cliente" placeholder="Ex.: Fulano da Silva" />
+                <Label for="fornecedor">Fornecedor</Label>
+                <Input id="fornecedor" v-model="form.fornecedor" placeholder="Ex.: Fornecedor X" />
               </div>
 
               <div class="space-y-3">
@@ -249,7 +218,7 @@ function confirmarCancelar() {
                       >
                         <option v-if="!produtos.length" :value="0" disabled>Carregando produtos…</option>
                         <option v-for="p in produtos" :key="p.id" :value="p.id">
-                          {{ p.nome }} ({{ money(p.preco_venda) }})
+                          {{ p.nome }}
                         </option>
                       </select>
                     </div>
@@ -274,7 +243,7 @@ function confirmarCancelar() {
 
                 <div class="flex items-center justify-between pt-1">
                   <span class="text-sm text-muted-foreground">Total</span>
-                  <span class="text-lg font-semibold">{{ money(total) }}</span>
+                  <span class="text-lg font-semibold">{{ money(totalForm) }}</span>
                 </div>
               </div>
             </div>
@@ -292,7 +261,7 @@ function confirmarCancelar() {
 
     <Card>
       <CardHeader>
-        <CardTitle class="text-base">Lista de vendas</CardTitle>
+        <CardTitle class="text-base">Lista de compras</CardTitle>
       </CardHeader>
       <CardContent>
         <div class="overflow-x-auto">
@@ -300,10 +269,9 @@ function confirmarCancelar() {
             <TableHeader>
               <TableRow>
                 <TableHead class="whitespace-nowrap">ID</TableHead>
-                <TableHead>Cliente</TableHead>
+                <TableHead>Fornecedor</TableHead>
                 <TableHead class="whitespace-nowrap">Itens</TableHead>
                 <TableHead class="whitespace-nowrap">Total</TableHead>
-                <TableHead class="whitespace-nowrap">Lucro</TableHead>
                 <TableHead class="whitespace-nowrap">Data</TableHead>
                 <TableHead class="whitespace-nowrap">Ações</TableHead>
               </TableRow>
@@ -316,66 +284,41 @@ function confirmarCancelar() {
                   <TableCell><Skeleton class="h-4 w-40" /></TableCell>
                   <TableCell><Skeleton class="h-4 w-10" /></TableCell>
                   <TableCell><Skeleton class="h-4 w-24" /></TableCell>
-                  <TableCell><Skeleton class="h-4 w-24" /></TableCell>
                   <TableCell><Skeleton class="h-4 w-36" /></TableCell>
-                  <TableCell class="flex gap-2"><Skeleton class="h-8 w-20" /><Skeleton class="h-8 w-24" /></TableCell>
+                  <TableCell class="flex gap-2"><Skeleton class="h-8 w-24" /></TableCell>
                 </TableRow>
               </template>
 
-              <TableRow v-else-if="vendasQ.isError && !vendas.length">
-                <TableCell colspan="7" class="text-center">
+              <TableRow v-else-if="comprasQ.isError && !compras.length">
+                <TableCell colspan="6" class="text-center">
                   <div class="flex flex-col items-center gap-2 py-4">
-                    <span class="text-sm text-muted-foreground">Não foi possível carregar as vendas.</span>
-                    <Button size="sm" variant="outline" class="transition-colors hover:bg-accent hover:text-accent-foreground" @click="vendasQ.refetch()">Tentar novamente</Button>
+                    <span class="text-sm text-muted-foreground">Não foi possível carregar as compras.</span>
+                    <Button size="sm" variant="outline" class="transition-colors hover:bg-accent hover:text-accent-foreground" @click="comprasQ.refetch()">Tentar novamente</Button>
                   </div>
                 </TableCell>
               </TableRow>
 
-              <TableRow v-else-if="!vendas.length">
-                <TableCell colspan="7" class="text-center text-muted-foreground">
-                  Nenhuma venda registrada.
+              <TableRow v-else-if="!compras.length">
+                <TableCell colspan="6" class="text-center text-muted-foreground">
+                  Nenhuma compra registrada.
                 </TableCell>
               </TableRow>
 
               <template v-else>
-                <TableRow v-for="v in vendas" :key="v.id">
-                  <TableCell>{{ v.id }}</TableCell>
-                  <TableCell class="font-medium">{{ v.cliente }}</TableCell>
-                  <TableCell>{{ v.itens?.length ?? v.produtos?.length ?? 0 }}</TableCell>
-                  <TableCell>{{ money(v.total) }}</TableCell>
-                  <TableCell>{{ money((v as any).lucro ?? (v as any).profit) }}</TableCell>
-                  <TableCell>{{ (v.created_at || v.data || '').toString().replace('T', ' ').slice(0, 19) }}</TableCell>
+                <TableRow v-for="c in compras" :key="c.id">
+                  <TableCell>{{ c.id }}</TableCell>
+                  <TableCell class="font-medium">{{ c.fornecedor }}</TableCell>
+                  <TableCell>{{ c.itens?.length ?? c.produtos?.length ?? 0 }}</TableCell>
+                  <TableCell>{{ money(c.total) }}</TableCell>
+                  <TableCell>{{ (c.created_at || '').toString().replace('T', ' ').slice(0, 19) }}</TableCell>
                   <TableCell class="flex gap-2">
                     <Button
                       size="sm"
                       variant="outline"
                       class="gap-1 transition-colors hover:bg-accent hover:text-accent-foreground"
-                      @click="openDetalhe(v.id)"
+                      @click="openDetalhe(c.id)"
                     >
                       <Eye class="h-4 w-4" /> Detalhes
-                    </Button>
-
-                    <Button
-                      v-if="v.status !== 'canceled'"
-                      size="sm"
-                      variant="destructive"
-                      class="gap-1 transition-opacity hover:opacity-90"
-                      :disabled="pendingCancelId === v.id"
-                      @click="solicitarCancelamento(v)"
-                    >
-                      <Loader2 v-if="pendingCancelId === v.id" class="h-4 w-4 animate-spin" />
-                      <XCircle v-else class="h-4 w-4" />
-                      Cancelar
-                    </Button>
-
-                    <Button
-                      v-else
-                      size="sm"
-                      variant="outline"
-                      class="gap-1 text-destructive border-destructive/50 bg-destructive/10 hover:bg-destructive/10 hover:text-destructive cursor-not-allowed pointer-events-none"
-                    >
-                      <XCircle class="h-3.5 w-3.5" />
-                      Cancelada
                     </Button>
                   </TableCell>
                 </TableRow>
@@ -389,7 +332,7 @@ function confirmarCancelar() {
     <Dialog v-model:open="openDetail">
       <DialogContent class="sm:max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Detalhes da venda {{ selectedId ?? '' }}</DialogTitle>
+          <DialogTitle>Detalhes da compra {{ selectedId ?? '' }}</DialogTitle>
         </DialogHeader>
 
         <div v-if="detalhePending" class="space-y-3">
@@ -404,10 +347,9 @@ function confirmarCancelar() {
 
         <div v-else class="space-y-4">
           <div class="grid grid-cols-2 gap-3 text-sm">
-            <div><span class="text-muted-foreground">Cliente:</span> <span class="font-medium">{{ vendaDetalhe?.cliente }}</span></div>
-            <div><span class="text-muted-foreground">Data:</span> <span class="font-medium">{{ (vendaDetalhe?.created_at || '').toString().replace('T', ' ').slice(0, 19) }}</span></div>
-            <div><span class="text-muted-foreground">Total:</span> <span class="font-medium">{{ money(vendaDetalhe?.total) }}</span></div>
-            <div><span class="text-muted-foreground">Lucro:</span> <span class="font-medium">{{ money(vendaDetalhe?.lucro) }}</span></div>
+            <div><span class="text-muted-foreground">Fornecedor:</span> <span class="font-medium">{{ compraDetalhe?.fornecedor }}</span></div>
+            <div><span class="text-muted-foreground">Data:</span> <span class="font-medium">{{ (compraDetalhe?.created_at || '').toString().replace('T', ' ').slice(0, 19) }}</span></div>
+            <div><span class="text-muted-foreground">Total:</span> <span class="font-medium">{{ money(compraDetalhe?.total) }}</span></div>
           </div>
 
           <div class="border rounded-lg overflow-hidden">
@@ -418,16 +360,14 @@ function confirmarCancelar() {
                   <TableHead>Qtd</TableHead>
                   <TableHead class="whitespace-nowrap">Preço unit.</TableHead>
                   <TableHead class="whitespace-nowrap">Subtotal</TableHead>
-                  <TableHead class="whitespace-nowrap">Lucro item</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                <TableRow v-for="(it, i) in (vendaDetalhe?.itens ?? vendaDetalhe?.produtos ?? [])" :key="i">
+                <TableRow v-for="(it, i) in (compraDetalhe?.itens ?? compraDetalhe?.produtos ?? [])" :key="i">
                   <TableCell>{{ it.produto_id }}</TableCell>
                   <TableCell>{{ it.quantidade }}</TableCell>
                   <TableCell>{{ money(it.preco_unitario) }}</TableCell>
                   <TableCell>{{ money(it.subtotal) }}</TableCell>
-                  <TableCell>{{ money(it.lucro_item) }}</TableCell>
                 </TableRow>
               </TableBody>
             </Table>
@@ -436,31 +376,6 @@ function confirmarCancelar() {
 
         <DialogFooter>
           <Button variant="outline" @click="openDetail = false">Fechar</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-
-    <Dialog v-model:open="confirmOpen">
-      <DialogContent class="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Cancelar venda {{ vendaToCancel?.id }}</DialogTitle>
-        </DialogHeader>
-        <div class="space-y-3 text-sm">
-          <p>Tem certeza que deseja cancelar esta venda de <span class="font-medium">{{ vendaToCancel?.cliente }}</span>?</p>
-          <p class="text-destructive">Esta ação é permanente e não pode ser revertida.</p>
-        </div>
-        <DialogFooter class="gap-2">
-          <Button variant="outline" @click="confirmOpen = false">Voltar</Button>
-          <Button
-            variant="destructive"
-            class="gap-2 transition-opacity hover:opacity-90"
-            :disabled="pendingCancelId === vendaToCancel?.id"
-            @click="confirmarCancelar"
-          >
-            <Loader2 v-if="pendingCancelId === vendaToCancel?.id" class="h-4 w-4 animate-spin" />
-            <XCircle v-else class="h-4 w-4" />
-            Cancelar venda
-          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
