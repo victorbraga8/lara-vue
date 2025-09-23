@@ -301,7 +301,6 @@ function confirmarCancelar() {
               <TableRow>
                 <TableHead class="whitespace-nowrap">ID</TableHead>
                 <TableHead>Cliente</TableHead>
-                <TableHead class="whitespace-nowrap">Itens</TableHead>
                 <TableHead class="whitespace-nowrap">Total</TableHead>
                 <TableHead class="whitespace-nowrap">Lucro</TableHead>
                 <TableHead class="whitespace-nowrap">Data</TableHead>
@@ -313,7 +312,6 @@ function confirmarCancelar() {
               <template v-if="showSkeleton">
                 <TableRow v-for="i in 6" :key="'skel-'+i">
                   <TableCell><Skeleton class="h-4 w-10" /></TableCell>
-                  <TableCell><Skeleton class="h-4 w-40" /></TableCell>
                   <TableCell><Skeleton class="h-4 w-10" /></TableCell>
                   <TableCell><Skeleton class="h-4 w-24" /></TableCell>
                   <TableCell><Skeleton class="h-4 w-24" /></TableCell>
@@ -341,7 +339,6 @@ function confirmarCancelar() {
                 <TableRow v-for="v in vendas" :key="v.id">
                   <TableCell>{{ v.id }}</TableCell>
                   <TableCell class="font-medium">{{ v.cliente }}</TableCell>
-                  <TableCell>{{ v.itens?.length ?? v.produtos?.length ?? 0 }}</TableCell>
                   <TableCell>{{ money(v.total) }}</TableCell>
                   <TableCell>{{ money((v as any).lucro ?? (v as any).profit) }}</TableCell>
                   <TableCell>{{ (v.created_at || v.data || '').toString().replace('T', ' ').slice(0, 19) }}</TableCell>

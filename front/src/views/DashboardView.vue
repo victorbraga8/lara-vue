@@ -82,7 +82,7 @@ function int(v: any, alt = 0) {
     <div class="grid gap-4 md:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
       <template v-if="isLoading || isFetching">
         <Card v-for="i in 4" :key="'kpi-skel-' + i" class="shadow-sm">
-          <CardHeader class="pb-2 bg-accent/40 rounded-t-2xl">
+          <CardHeader class="pb-2 rounded-t-2xl">
             <Skeleton class="h-4 w-24" />
           </CardHeader>
           <CardContent class="space-y-2">
@@ -94,46 +94,46 @@ function int(v: any, alt = 0) {
 
       <template v-else>
         <Card class="shadow-sm">
-          <CardHeader class="flex items-center justify-between pb-2 bg-accent/40 rounded-t-2xl">
+          <CardHeader class="flex items-center justify-between rounded-t-2xl">
             <CardTitle class="text-sm font-medium">Receita (mês)</CardTitle>
             <DollarSign class="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
             <div class="text-2xl font-bold">{{ money(m?.revenue_month) }}</div>
-            <p class="text-xs text-muted-foreground">Vendas concluídas no mês</p>
+            <p class="text-sm text-muted-foreground">Vendas concluídas no mês</p>
           </CardContent>
         </Card>
 
         <Card class="shadow-sm">
-          <CardHeader class="flex items-center justify-between pb-2 bg-accent/40 rounded-t-2xl">
+          <CardHeader class="flex items-center justify-between rounded-t-2xl">
             <CardTitle class="text-sm font-medium">Lucro (mês)</CardTitle>
             <TrendingUp class="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
             <div class="text-2xl font-bold">{{ money(m?.profit_month) }}</div>
-            <p class="text-xs text-muted-foreground">Com base no custo médio</p>
+            <p class="text-sm text-muted-foreground">Com base no custo médio</p>
           </CardContent>
         </Card>
 
         <Card class="shadow-sm">
-          <CardHeader class="flex items-center justify-between pb-2 bg-accent/40 rounded-t-2xl">
+          <CardHeader class="flex items-center justify-between rounded-t-2xl">
             <CardTitle class="text-sm font-medium">Produtos</CardTitle>
             <Box class="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
             <div class="text-2xl font-bold">{{ int(m?.products_count ?? m?.products, 0) }}</div>
-            <p class="text-xs text-muted-foreground">Itens cadastrados</p>
+            <p class="text-sm text-muted-foreground">Itens cadastrados</p>
           </CardContent>
         </Card>
 
         <Card class="shadow-sm">
-          <CardHeader class="flex items-center justify-between pb-2 bg-accent/40 rounded-t-2xl">
+          <CardHeader class="flex items-center justify-between rounded-t-2xl">
             <CardTitle class="text-sm font-medium">Estoque crítico</CardTitle>
             <AlertTriangle class="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
             <div class="text-2xl font-bold">{{ int(m?.low_stock ?? m?.critical_stock, 0) }}</div>
-            <p class="text-xs text-muted-foreground">≤ 5 unidades</p>
+            <p class="text-sm text-muted-foreground">≤ 5 unidades</p>
           </CardContent>
         </Card>
       </template>
@@ -203,9 +203,6 @@ function int(v: any, alt = 0) {
           </Button>
           <Button class="w-full justify-start gap-2" variant="outline" @click="go('/vendas')">
             <HandCoins class="w-4 h-4" /> Registrar venda
-          </Button>
-          <Button class="w-full justify-start gap-2" variant="outline" @click="go('/about')">
-            <BarChart3 class="w-4 h-4" /> Sobre / ajuda
           </Button>
         </CardContent>
       </Card>
