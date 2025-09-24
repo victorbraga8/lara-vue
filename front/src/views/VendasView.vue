@@ -27,12 +27,9 @@ const pendingCancelId = ref<number | null>(null)
 
 function showToast(type: 'success' | 'error', message: string) {
   toast.custom(
-    () =>
-      h(
-        'div',
-        { class: 'mx-auto w-[92vw] max-w-[520px] rounded-xl border bg-background/95 backdrop-blur px-4 py-3 shadow-2xl ring-1 ring-black/5' },
-        [h('p', { class: `text-center text-sm font-medium ${type === 'success' ? 'text-emerald-600' : 'text-red-600'}` }, message)],
-      ),
+    () => h('div', { class: 'mx-auto w-[92vw] max-w-[520px] rounded-xl border bg-background/95 backdrop-blur px-4 py-3 shadow-2xl ring-1 ring-black/5' }, [
+      h('p', { class: `text-center text-sm font-medium ${type === 'success' ? 'text-emerald-600' : 'text-red-600'}` }, message),
+    ]),
     { position: 'top-center', duration: 2800 },
   )
 }
@@ -148,7 +145,7 @@ const modalBodyRef = ref<HTMLElement | null>(null)
 const { mutateAsync: createRun, isPending: createPending, reset: resetCreate } = useMutation({
   mutationFn: (payload: NovaVenda) => criarVenda(payload),
   onSuccess: async (res: any) => {
-    showToast('success', res?.message || 'Venda registrada')
+    showToast('success', res?.message || 'Venda registrado')
     open.value = false
     form.cliente = ''
     form.produtos = []
@@ -268,7 +265,7 @@ watch(() => form.produtos.map(p => p.preco_unitario), (v) => v.forEach((_, i) =>
             <Button class="gap-2 justify-center"><Plus class="h-4 w-4" /> Registrar venda</Button>
           </DialogTrigger>
           <DialogContent class="w-[94vw] max-w-[94vw] sm:w-[640px] sm:max-w-[640px] md:w-[720px] md:max-w-[720px] p-0">
-            <div class="flex flex-col h-[90svh] max-h-[90svh] sm:max-h-[85vh]">
+            <div class="flex flex-col max-h-[85vh]">
               <DialogHeader class="px-6 pt-6">
                 <DialogTitle>Registrar venda</DialogTitle>
               </DialogHeader>
@@ -399,58 +396,56 @@ watch(() => form.produtos.map(p => p.preco_unitario), (v) => v.forEach((_, i) =>
     </Card>
 
     <Dialog v-model:open="openDetail">
-      <DialogContent class="w-[94vw] max-w-[94vw] sm:w-[640px] sm:max-w-[640px] md:w-[720px] md:max-w-[720px] p-0">
-        <div class="flex flex-col h-[90svh] max-h-[90svh] sm:max-h-[85vh]">
-          <DialogHeader class="px-6 pt-6">
-            <DialogTitle>Detalhes da venda {{ selectedId ?? '' }}</DialogTitle>
-          </DialogHeader>
-          <div class="px-6 pb-4 overflow-y-auto">
-            <div v-if="detalhePending" class="space-y-3">
-              <Skeleton class="h-4 w-56" />
-              <Skeleton class="h-4 w-40" />
-              <div class="grid gap-2">
-                <Skeleton class="h-8 w-full" />
-                <Skeleton class="h-8 w-full" />
-                <Skeleton class="h-8 w-full" />
-              </div>
+      <DialogContent class="w-[94vw] max-w-[94vw] sm:w-[640px] sm:max-w-[640px] md:w-[720px] md:max-w-[720px] p-0 overflow-hidden">
+        <DialogHeader class="px-6 pt-6">
+          <DialogTitle>Detalhes da venda {{ selectedId ?? '' }}</DialogTitle>
+        </DialogHeader>
+        <div class="px-4 sm:px-6 pb-4 max-h-[70vh] overflow-y-auto">
+          <div v-if="detalhePending" class="space-y-3">
+            <Skeleton class="h-4 w-56" />
+            <Skeleton class="h-4 w-40" />
+            <div class="grid gap-2">
+              <Skeleton class="h-8 w-full" />
+              <Skeleton class="h-8 w-full" />
+              <Skeleton class="h-8 w-full" />
             </div>
-            <div v-else class="space-y-4">
-              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs sm:text-sm">
-                <div class="break-words"><span class="text-muted-foreground">Cliente:</span> <span class="font-medium">{{ vendaDetalhe?.cliente }}</span></div>
-                <div class="break-words"><span class="text-muted-foreground">Data:</span> <span class="font-medium">{{ (vendaDetalhe?.created_at || '').toString().replace('T', ' ').slice(0, 19) }}</span></div>
-                <div class="break-words"><span class="text-muted-foreground">Total:</span> <span class="font-medium">{{ money(vendaDetalhe?.total) }}</span></div>
-                <div class="break-words"><span class="text-muted-foreground">Lucro:</span> <span class="font-medium">{{ money(vendaDetalhe?.lucro) }}</span></div>
-              </div>
-              <div class="border rounded-lg overflow-hidden">
-                <div class="overflow-x-auto">
-                  <Table class="text-xs sm:text-sm min-w-[520px]">
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead class="whitespace-nowrap">Produto</TableHead>
-                        <TableHead>Qtd</TableHead>
-                        <TableHead class="whitespace-nowrap">Preço unit.</TableHead>
-                        <TableHead class="whitespace-nowrap">Subtotal</TableHead>
-                        <TableHead class="whitespace-nowrap">Lucro item</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      <TableRow v-for="(it, i) in (vendaDetalhe?.itens ?? vendaDetalhe?.produtos ?? [])" :key="i">
-                        <TableCell class="break-words max-w-[180px]">{{ it.produto_id }}</TableCell>
-                        <TableCell>{{ it.quantidade }}</TableCell>
-                        <TableCell>{{ money(it.preco_unitario) }}</TableCell>
-                        <TableCell>{{ money(it.subtotal) }}</TableCell>
-                        <TableCell>{{ money(it.lucro_item) }}</TableCell>
-                      </TableRow>
-                    </TableBody>
-                  </Table>
-                </div>
+          </div>
+          <div v-else class="space-y-4">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs sm:text-sm">
+              <div class="break-words"><span class="text-muted-foreground">Cliente:</span> <span class="font-medium">{{ vendaDetalhe?.cliente }}</span></div>
+              <div class="break-words"><span class="text-muted-foreground">Data:</span> <span class="font-medium">{{ (vendaDetalhe?.created_at || '').toString().replace('T', ' ').slice(0, 19) }}</span></div>
+              <div class="break-words"><span class="text-muted-foreground">Total:</span> <span class="font-medium">{{ money(vendaDetalhe?.total) }}</span></div>
+              <div class="break-words"><span class="text-muted-foreground">Lucro:</span> <span class="font-medium">{{ money(vendaDetalhe?.lucro) }}</span></div>
+            </div>
+            <div class="border rounded-lg overflow-hidden">
+              <div class="overflow-x-auto">
+                <Table class="w-full text-xs sm:text-sm">
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead class="whitespace-nowrap">Produto</TableHead>
+                      <TableHead>Qtd</TableHead>
+                      <TableHead class="whitespace-nowrap">Preço unit.</TableHead>
+                      <TableHead class="whitespace-nowrap">Subtotal</TableHead>
+                      <TableHead class="whitespace-nowrap">Lucro item</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    <TableRow v-for="(it, i) in (vendaDetalhe?.itens ?? vendaDetalhe?.produtos ?? [])" :key="i">
+                      <TableCell class="break-words max-w-[180px]">{{ it.produto_id }}</TableCell>
+                      <TableCell>{{ it.quantidade }}</TableCell>
+                      <TableCell>{{ money(it.preco_unitario) }}</TableCell>
+                      <TableCell>{{ money(it.subtotal) }}</TableCell>
+                      <TableCell>{{ money(it.lucro_item) }}</TableCell>
+                    </TableRow>
+                  </TableBody>
+                </Table>
               </div>
             </div>
           </div>
-          <DialogFooter class="mt-0 px-6 py-4 border-t bg-background">
-            <Button variant="outline" @click="openDetail = false">Fechar</Button>
-          </DialogFooter>
         </div>
+        <DialogFooter class="mt-0 px-6 py-4 border-t bg-background">
+          <Button variant="outline" @click="openDetail = false">Fechar</Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
 
