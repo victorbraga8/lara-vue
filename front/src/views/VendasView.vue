@@ -2,10 +2,8 @@
 import { computed, reactive, ref, watch, watchEffect, nextTick, h } from 'vue'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query'
 import { toast } from 'vue-sonner'
-
 import { listarVendas, criarVenda, obterVenda, cancelarVenda } from '@/services/vendas'
 import { listarProdutos } from '@/services/produtos'
-
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -33,9 +31,7 @@ function showToast(type: 'success' | 'error', message: string) {
       h(
         'div',
         { class: 'mx-auto w-[92vw] max-w-[520px] rounded-xl border bg-background/95 backdrop-blur px-4 py-3 shadow-2xl ring-1 ring-black/5' },
-        [
-          h('p', { class: `text-center text-sm font-medium ${type === 'success' ? 'text-emerald-600' : 'text-red-600'}` }, message),
-        ],
+        [h('p', { class: `text-center text-sm font-medium ${type === 'success' ? 'text-emerald-600' : 'text-red-600'}` }, message)],
       ),
     { position: 'top-center', duration: 2800 },
   )
@@ -182,9 +178,7 @@ const { mutateAsync: createRun, isPending: createPending, reset: resetCreate } =
         })
         msgs.push(`${produtoNome(pid)} → disponível ${disponivel}`)
       }
-      formErrors.general = msgs.length
-        ? `Não foi possível concluir. Ajustei automaticamente os itens com estoque insuficiente: ${msgs.join(' | ')}. Revise e salve novamente.`
-        : (data?.message || 'Erro ao registrar venda')
+      formErrors.general = msgs.length ? `Não foi possível concluir. Ajustei automaticamente os itens com estoque insuficiente: ${msgs.join(' | ')}. Revise e salve novamente.` : (data?.message || 'Erro ao registrar venda')
     } else {
       formErrors.general = data?.message || 'Erro ao registrar venda'
     }
@@ -265,42 +259,35 @@ watch(() => form.produtos.map(p => p.preco_unitario), (v) => v.forEach((_, i) =>
   <div class="p-4 sm:p-6 space-y-6">
     <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       <h1 class="text-2xl font-semibold">Vendas</h1>
-
       <div class="flex flex-col sm:flex-row gap-2 sm:items-center">
         <Button variant="outline" size="sm" class="gap-2 justify-center" @click="refreshList" :disabled="refreshing">
           <Loader2 v-if="refreshing" class="h-4 w-4 animate-spin" /><RefreshCw v-else class="h-4 w-4" />Atualizar
         </Button>
-
         <Dialog v-model:open="open">
           <DialogTrigger as-child>
             <Button class="gap-2 justify-center"><Plus class="h-4 w-4" /> Registrar venda</Button>
           </DialogTrigger>
-
           <DialogContent class="w-[94vw] max-w-[94vw] sm:w-[640px] sm:max-w-[640px] md:w-[720px] md:max-w-[720px] p-0">
             <div class="flex flex-col h-[90svh] max-h-[90svh] sm:max-h-[85vh]">
               <DialogHeader class="px-6 pt-6">
                 <DialogTitle>Registrar venda</DialogTitle>
               </DialogHeader>
-
               <div ref="modalBodyRef" class="px-6 pb-4 overflow-y-auto">
                 <div v-if="apiError || formErrors.general" class="mb-3 flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive" role="alert">
                   <AlertTriangle class="h-4 w-4 mt-0.5 shrink-0" />
                   <span>{{ apiError || formErrors.general }}</span>
                 </div>
-
                 <div class="grid gap-4 py-2">
                   <div class="grid gap-2">
                     <Label for="cliente">Cliente</Label>
                     <Input id="cliente" v-model="form.cliente" placeholder="Ex.: Fulano da Silva" :aria-invalid="!!formErrors.cliente" />
                     <p v-if="formErrors.cliente" class="text-sm text-destructive">{{ formErrors.cliente }}</p>
                   </div>
-
                   <div class="space-y-3">
                     <div class="flex items-center justify-between">
                       <span class="text-sm font-medium">Itens</span>
                       <Button variant="outline" size="sm" @click="addItem">Adicionar item</Button>
                     </div>
-
                     <div class="space-y-3">
                       <div v-for="(it, i) in form.produtos" :key="i" class="grid grid-cols-1 sm:grid-cols-12 gap-3 border rounded-lg p-3">
                         <div class="sm:col-span-6">
@@ -311,19 +298,16 @@ watch(() => form.produtos.map(p => p.preco_unitario), (v) => v.forEach((_, i) =>
                           </select>
                           <p v-if="formErrors.itens[i]?.id" class="text-sm text-destructive mt-1">{{ formErrors.itens[i]?.id }}</p>
                         </div>
-
                         <div class="sm:col-span-3">
                           <Label>Qtd</Label>
                           <Input class="mt-2" type="number" min="0" v-model="(it.quantidade as any)" :aria-invalid="!!formErrors.itens[i]?.quantidade" />
                           <p v-if="formErrors.itens[i]?.quantidade" class="text-sm text-destructive mt-1">{{ formErrors.itens[i]?.quantidade }}</p>
                         </div>
-
                         <div class="sm:col-span-3">
                           <Label>Preço unitário</Label>
                           <Input class="mt-2" type="number" step="0.01" min="0" v-model="(it.preco_unitario as any)" :aria-invalid="!!formErrors.itens[i]?.preco_unitario" />
                           <p v-if="formErrors.itens[i]?.preco_unitario" class="text-sm text-destructive mt-1">{{ formErrors.itens[i]?.preco_unitario }}</p>
                         </div>
-
                         <div class="sm:col-span-12 flex justify-end">
                           <Button variant="destructive" size="icon" class="mt-1 sm:mt-6" @click="removeItem(i)">
                             <Trash2 class="h-4 w-4" />
@@ -331,7 +315,6 @@ watch(() => form.produtos.map(p => p.preco_unitario), (v) => v.forEach((_, i) =>
                         </div>
                       </div>
                     </div>
-
                     <div class="flex items-center justify-between pt-1">
                       <span class="text-sm text-muted-foreground">Total</span>
                       <span class="text-lg font-semibold">{{ money(total) }}</span>
@@ -339,7 +322,6 @@ watch(() => form.produtos.map(p => p.preco_unitario), (v) => v.forEach((_, i) =>
                   </div>
                 </div>
               </div>
-
               <DialogFooter class="mt-0 px-6 py-4 border-t bg-background">
                 <Button :disabled="createPending" class="gap-2" @click="submit">
                   <Loader2 v-if="createPending" class="h-4 w-4 animate-spin" /><span v-else>Salvar</span>
@@ -379,7 +361,6 @@ watch(() => form.produtos.map(p => p.preco_unitario), (v) => v.forEach((_, i) =>
                   <TableCell class="flex gap-2"><Skeleton class="h-8 w-20" /><Skeleton class="h-8 w-24" /></TableCell>
                 </TableRow>
               </template>
-
               <TableRow v-else-if="vendasQ.isError && !vendas.length">
                 <TableCell colspan="7" class="text-center">
                   <div class="flex flex-col items-center gap-2 py-4">
@@ -388,15 +369,13 @@ watch(() => form.produtos.map(p => p.preco_unitario), (v) => v.forEach((_, i) =>
                   </div>
                 </TableCell>
               </TableRow>
-
               <TableRow v-else-if="!vendas.length">
                 <TableCell colspan="7" class="text-center text-muted-foreground">Nenhuma venda registrada.</TableCell>
               </TableRow>
-
               <template v-else>
                 <TableRow v-for="v in vendas" :key="v.id">
                   <TableCell>{{ v.id }}</TableCell>
-                  <TableCell class="font-medium">{{ v.cliente }}</TableCell>
+                  <TableCell class="font-medium break-words max-w-[180px]">{{ v.cliente }}</TableCell>
                   <TableCell>{{ money(v.total) }}</TableCell>
                   <TableCell>{{ money((v as any).lucro ?? (v as any).profit) }}</TableCell>
                   <TableCell>{{ (v.created_at || v.data || '').toString().replace('T', ' ').slice(0, 19) }}</TableCell>
@@ -420,51 +399,58 @@ watch(() => form.produtos.map(p => p.preco_unitario), (v) => v.forEach((_, i) =>
     </Card>
 
     <Dialog v-model:open="openDetail">
-      <DialogContent class="w-[94vw] max-w-[94vw] sm:w-[640px] sm:max-w-[640px] md:w-[720px] md:max-w-[720px]">
-        <DialogHeader>
-          <DialogTitle>Detalhes da venda {{ selectedId ?? '' }}</DialogTitle>
-        </DialogHeader>
-
-        <div v-if="detalhePending" class="space-y-3">
-          <Skeleton class="h-4 w-56" /><Skeleton class="h-4 w-40" />
-          <div class="grid gap-2"><Skeleton class="h-8 w-full" /><Skeleton class="h-8 w-full" /><Skeleton class="h-8 w-full" /></div>
-        </div>
-
-        <div v-else class="space-y-4">
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-            <div><span class="text-muted-foreground">Cliente:</span> <span class="font-medium">{{ vendaDetalhe?.cliente }}</span></div>
-            <div><span class="text-muted-foreground">Data:</span> <span class="font-medium">{{ (vendaDetalhe?.created_at || '').toString().replace('T', ' ').slice(0, 19) }}</span></div>
-            <div><span class="text-muted-foreground">Total:</span> <span class="font-medium">{{ money(vendaDetalhe?.total) }}</span></div>
-            <div><span class="text-muted-foreground">Lucro:</span> <span class="font-medium">{{ money(vendaDetalhe?.lucro) }}</span></div>
+      <DialogContent class="w-[94vw] max-w-[94vw] sm:w-[640px] sm:max-w-[640px] md:w-[720px] md:max-w-[720px] p-0">
+        <div class="flex flex-col h-[90svh] max-h-[90svh] sm:max-h-[85vh]">
+          <DialogHeader class="px-6 pt-6">
+            <DialogTitle>Detalhes da venda {{ selectedId ?? '' }}</DialogTitle>
+          </DialogHeader>
+          <div class="px-6 pb-4 overflow-y-auto">
+            <div v-if="detalhePending" class="space-y-3">
+              <Skeleton class="h-4 w-56" />
+              <Skeleton class="h-4 w-40" />
+              <div class="grid gap-2">
+                <Skeleton class="h-8 w-full" />
+                <Skeleton class="h-8 w-full" />
+                <Skeleton class="h-8 w-full" />
+              </div>
+            </div>
+            <div v-else class="space-y-4">
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs sm:text-sm">
+                <div class="break-words"><span class="text-muted-foreground">Cliente:</span> <span class="font-medium">{{ vendaDetalhe?.cliente }}</span></div>
+                <div class="break-words"><span class="text-muted-foreground">Data:</span> <span class="font-medium">{{ (vendaDetalhe?.created_at || '').toString().replace('T', ' ').slice(0, 19) }}</span></div>
+                <div class="break-words"><span class="text-muted-foreground">Total:</span> <span class="font-medium">{{ money(vendaDetalhe?.total) }}</span></div>
+                <div class="break-words"><span class="text-muted-foreground">Lucro:</span> <span class="font-medium">{{ money(vendaDetalhe?.lucro) }}</span></div>
+              </div>
+              <div class="border rounded-lg overflow-hidden">
+                <div class="overflow-x-auto">
+                  <Table class="text-xs sm:text-sm min-w-[520px]">
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead class="whitespace-nowrap">Produto</TableHead>
+                        <TableHead>Qtd</TableHead>
+                        <TableHead class="whitespace-nowrap">Preço unit.</TableHead>
+                        <TableHead class="whitespace-nowrap">Subtotal</TableHead>
+                        <TableHead class="whitespace-nowrap">Lucro item</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      <TableRow v-for="(it, i) in (vendaDetalhe?.itens ?? vendaDetalhe?.produtos ?? [])" :key="i">
+                        <TableCell class="break-words max-w-[180px]">{{ it.produto_id }}</TableCell>
+                        <TableCell>{{ it.quantidade }}</TableCell>
+                        <TableCell>{{ money(it.preco_unitario) }}</TableCell>
+                        <TableCell>{{ money(it.subtotal) }}</TableCell>
+                        <TableCell>{{ money(it.lucro_item) }}</TableCell>
+                      </TableRow>
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+            </div>
           </div>
-
-          <div class="border rounded-lg overflow-hidden">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead class="whitespace-nowrap">Produto</TableHead>
-                  <TableHead>Qtd</TableHead>
-                  <TableHead class="whitespace-nowrap">Preço unit.</TableHead>
-                  <TableHead class="whitespace-nowrap">Subtotal</TableHead>
-                  <TableHead class="whitespace-nowrap">Lucro item</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                <TableRow v-for="(it, i) in (vendaDetalhe?.itens ?? vendaDetalhe?.produtos ?? [])" :key="i">
-                  <TableCell>{{ it.produto_id }}</TableCell>
-                  <TableCell>{{ it.quantidade }}</TableCell>
-                  <TableCell>{{ money(it.preco_unitario) }}</TableCell>
-                  <TableCell>{{ money(it.subtotal) }}</TableCell>
-                  <TableCell>{{ money(it.lucro_item) }}</TableCell>
-                </TableRow>
-              </TableBody>
-            </Table>
-          </div>
+          <DialogFooter class="mt-0 px-6 py-4 border-t bg-background">
+            <Button variant="outline" @click="openDetail = false">Fechar</Button>
+          </DialogFooter>
         </div>
-
-        <DialogFooter>
-          <Button variant="outline" @click="openDetail = false">Fechar</Button>
-        </DialogFooter>
       </DialogContent>
     </Dialog>
 
