@@ -66,6 +66,18 @@ Este projeto foi desenvolvido com **Laravel** (backend/API) e **Vue.js** (fronte
 
 ---
 
+---
+
+## ⚙️ Melhorias Imediatas/Sugeridas
+
+- Componentização/Reutilização de itens
+- Centralização de Funções e Métodos (Arquitetura useCases)
+- Centratalização de Query Client
+- Criação de layers complementares (Types - Interfaces - Providers)
+
+---
+
+
 ## 📦 Instalação
 
 ### Backend (Laravel)
