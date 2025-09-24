@@ -370,57 +370,58 @@ watch(() => form.produtos.map(p => p.preco_unitario), (v) => v.forEach((_, i) =>
       </CardHeader>
       <CardContent>
         <div class="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead class="whitespace-nowrap">ID</TableHead>
-                <TableHead>Fornecedor</TableHead>
-                <TableHead class="whitespace-nowrap">Total</TableHead>
-                <TableHead class="whitespace-nowrap">Data</TableHead>
-                <TableHead class="whitespace-nowrap">Ações</TableHead>
-              </TableRow>
-            </TableHeader>
-
-            <TableBody>
-              <template v-if="showSkeleton">
-                <TableRow v-for="i in 6" :key="'skel-'+i">
-                  <TableCell><Skeleton class="h-4 w-10" /></TableCell>
-                  <TableCell><Skeleton class="h-4 w-40" /></TableCell>
-                  <TableCell><Skeleton class="h-4 w-10" /></TableCell>
-                  <TableCell><Skeleton class="h-4 w-24" /></TableCell>
-                  <TableCell><Skeleton class="h-4 w-36" /></TableCell>
-                  <TableCell class="flex gap-2"><Skeleton class="h-8 w-24" /></TableCell>
+          <div class="max-h-[65svh] sm:max-h-[60vh] overflow-y-auto rounded-md">
+            <Table class="w-full">
+              <TableHeader class="sticky top-0 z-10 bg-background">
+                <TableRow>
+                  <TableHead class="whitespace-nowrap">ID</TableHead>
+                  <TableHead>Fornecedor</TableHead>
+                  <TableHead class="whitespace-nowrap">Total</TableHead>
+                  <TableHead class="whitespace-nowrap">Data</TableHead>
+                  <TableHead class="whitespace-nowrap">Ações</TableHead>
                 </TableRow>
-              </template>
+              </TableHeader>
 
-              <TableRow v-else-if="comprasQ.isError && !compras.length">
-                <TableCell colspan="6" class="text-center">
-                  <div class="flex flex-col items-center gap-2 py-4">
-                    <span class="text-sm text-muted-foreground">Não foi possível carregar as compras.</span>
-                    <Button size="sm" variant="outline" @click="comprasQ.refetch()">Tentar novamente</Button>
-                  </div>
-                </TableCell>
-              </TableRow>
+              <TableBody>
+                <template v-if="showSkeleton">
+                  <TableRow v-for="i in 10" :key="'skel-'+i">
+                    <TableCell><Skeleton class="h-4 w-10" /></TableCell>
+                    <TableCell><Skeleton class="h-4 w-40" /></TableCell>
+                    <TableCell><Skeleton class="h-4 w-10" /></TableCell>
+                    <TableCell><Skeleton class="h-4 w-24" /></TableCell>
+                    <TableCell class="flex gap-2"><Skeleton class="h-8 w-24" /></TableCell>
+                  </TableRow>
+                </template>
 
-              <TableRow v-else-if="!compras.length">
-                <TableCell colspan="6" class="text-center text-muted-foreground">Nenhuma compra registrada.</TableCell>
-              </TableRow>
-
-              <template v-else>
-                <TableRow v-for="c in compras" :key="c.id">
-                  <TableCell>{{ c.id }}</TableCell>
-                  <TableCell class="font-medium">{{ c.fornecedor }}</TableCell>
-                  <TableCell>{{ money(c.total) }}</TableCell>
-                  <TableCell>{{ (c.created_at || '').toString().replace('T', ' ').slice(0, 19) }}</TableCell>
-                  <TableCell class="flex gap-2">
-                    <Button size="sm" variant="outline" class="gap-1" @click="openDetalhe(c.id)">
-                      <Eye class="h-4 w-4" /> Detalhes
-                    </Button>
+                <TableRow v-else-if="comprasQ.isError && !compras.length">
+                  <TableCell colspan="5" class="text-center">
+                    <div class="flex flex-col items-center gap-2 py-4">
+                      <span class="text-sm text-muted-foreground">Não foi possível carregar as compras.</span>
+                      <Button size="sm" variant="outline" @click="comprasQ.refetch()">Tentar novamente</Button>
+                    </div>
                   </TableCell>
                 </TableRow>
-              </template>
-            </TableBody>
-          </Table>
+
+                <TableRow v-else-if="!compras.length">
+                  <TableCell colspan="5" class="text-center text-muted-foreground">Nenhuma compra registrada.</TableCell>
+                </TableRow>
+
+                <template v-else>
+                  <TableRow v-for="c in compras" :key="c.id">
+                    <TableCell>{{ c.id }}</TableCell>
+                    <TableCell class="font-medium">{{ c.fornecedor }}</TableCell>
+                    <TableCell>{{ money(c.total) }}</TableCell>
+                    <TableCell>{{ (c.created_at || '').toString().replace('T', ' ').slice(0, 19) }}</TableCell>
+                    <TableCell class="flex gap-2">
+                      <Button size="sm" variant="outline" class="gap-1" @click="openDetalhe(c.id)">
+                        <Eye class="h-4 w-4" /> Detalhes
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                </template>
+              </TableBody>
+            </Table>
+          </div>
         </div>
       </CardContent>
     </Card>
@@ -449,24 +450,26 @@ watch(() => form.produtos.map(p => p.preco_unitario), (v) => v.forEach((_, i) =>
           </div>
 
           <div class="border rounded-lg overflow-hidden">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead class="whitespace-nowrap">Produto</TableHead>
-                  <TableHead>Qtd</TableHead>
-                  <TableHead class="whitespace-nowrap">Preço unit.</TableHead>
-                  <TableHead class="whitespace-nowrap">Subtotal</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                <TableRow v-for="(it, i) in (compraDetalhe?.itens ?? compraDetalhe?.produtos ?? [])" :key="i">
-                  <TableCell>{{ it.produto_id }}</TableCell>
-                  <TableCell>{{ it.quantidade }}</TableCell>
-                  <TableCell>{{ money(it.preco_unitario) }}</TableCell>
-                  <TableCell>{{ money(it.subtotal) }}</TableCell>
-                </TableRow>
-              </TableBody>
-            </Table>
+            <div class="overflow-x-auto">
+              <Table class="w-full text-xs sm:text-sm">
+                <TableHeader>
+                  <TableRow>
+                    <TableHead class="whitespace-nowrap">Produto</TableHead>
+                    <TableHead>Qtd</TableHead>
+                    <TableHead class="whitespace-nowrap">Preço unit.</TableHead>
+                    <TableHead class="whitespace-nowrap">Subtotal</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  <TableRow v-for="(it, i) in (compraDetalhe?.itens ?? compraDetalhe?.produtos ?? [])" :key="i">
+                    <TableCell>{{ it.produto_id }}</TableCell>
+                    <TableCell>{{ it.quantidade }}</TableCell>
+                    <TableCell>{{ money(it.preco_unitario) }}</TableCell>
+                    <TableCell>{{ money(it.subtotal) }}</TableCell>
+                  </TableRow>
+                </TableBody>
+              </Table>
+            </div>
           </div>
         </div>
 
