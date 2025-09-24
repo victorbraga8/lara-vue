@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, reactive, ref, watch, watchEffect } from 'vue'
+import { computed, reactive, ref, watch, watchEffect, h } from 'vue'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query'
 import { toast } from 'vue-sonner'
 
@@ -24,6 +24,24 @@ const qc = useQueryClient()
 const open = ref(false)
 const openDetail = ref(false)
 const selectedId = ref<number | null>(null)
+
+function showToast(type: 'success' | 'error', message: string) {
+  toast.custom(
+    () =>
+      h(
+        'div',
+        { class: 'mx-auto w-[92vw] max-w-[520px] rounded-xl border bg-background/95 backdrop-blur px-4 py-3 shadow-2xl ring-1 ring-black/5' },
+        [h('p', { class: `text-center text-sm font-medium ${type === 'success' ? 'text-emerald-600' : 'text-red-600'}` }, message)],
+      ),
+    { position: 'top-center', duration: 2800 },
+  )
+}
+
+async function refreshModuleData() {
+  await qc.invalidateQueries({ predicate: (q) => Array.isArray(q.queryKey) && (q.queryKey[0] === 'compras' || q.queryKey[0] === 'produtos') })
+  await qc.refetchQueries({ queryKey: ['compras'], type: 'active' })
+  await qc.refetchQueries({ queryKey: ['produtos'], type: 'active' })
+}
 
 const comprasQ = useQuery<CompraRow[]>({
   queryKey: ['compras', 'list'],
@@ -79,12 +97,12 @@ const detalhePending = computed(() => compraDetalheQ.status.value === 'pending')
 
 watchEffect(() => {
   if (comprasQ.isError.value && (!comprasQ.data?.value || comprasQ.data?.value.length === 0)) {
-    toast.error((comprasQ.error.value as any)?.message || 'Falha ao carregar compras', { position: 'top-center' })
+    showToast('error', (comprasQ.error.value as any)?.message || 'Falha ao carregar compras')
   }
 })
 watchEffect(() => {
   if (compraDetalheQ.isError.value) {
-    toast.error((compraDetalheQ.error.value as any)?.message || 'Falha ao carregar compra', { position: 'top-center' })
+    showToast('error', (compraDetalheQ.error.value as any)?.message || 'Falha ao carregar compra')
   }
 })
 watchEffect(() => { if (!openDetail.value) selectedId.value = null })
@@ -125,7 +143,7 @@ const totalForm = computed(() => form.produtos.reduce((acc, it) => acc + Number(
 const { mutateAsync: createMutationRun, isPending: createPending, reset: resetCreateMutation } = useMutation({
   mutationFn: (payload: NovaCompra) => criarCompra(payload),
   onSuccess: async (res: any) => {
-    toast.success(res?.message || 'Compra registrada', { position: 'top-center' })
+    showToast('success', res?.message || 'Compra registrada')
     open.value = false
     form.fornecedor = ''
     form.produtos = []
@@ -133,20 +151,16 @@ const { mutateAsync: createMutationRun, isPending: createPending, reset: resetCr
     delete formErrors.fornecedor
     delete formErrors.general
     resetCreateMutation()
-    await qc.invalidateQueries({ queryKey: ['compras', 'list'] })
-    await qc.invalidateQueries({ queryKey: ['produtos'] })
+    await refreshModuleData()
   },
   onError: (e: any) => {
     formErrors.general = e?.response?.data?.message || 'Erro ao registrar compra'
     resetCreateMutation()
+    showToast('error', formErrors.general ?? 'Erro ao registrar compra')
   },
 })
 
-watch(open, (isOpen) => {
-  if (!isOpen) {
-    resetCreateMutation()
-  }
-})
+watch(open, (isOpen) => { if (!isOpen) { resetCreateMutation() } })
 
 function validateLocal(): boolean {
   formErrors.itens = []
@@ -180,10 +194,7 @@ async function submit() {
   })
 }
 
-function openDetalhe(id: number) {
-  selectedId.value = id
-  openDetail.value = true
-}
+function openDetalhe(id: number) { selectedId.value = id; openDetail.value = true }
 
 function money(n: number | string | undefined) {
   const v = typeof n === 'string' ? Number(n) : (n ?? 0)

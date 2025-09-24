@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, reactive, ref, watch, watchEffect, nextTick } from 'vue'
+import { computed, reactive, ref, watch, watchEffect, nextTick, h } from 'vue'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query'
 import { toast } from 'vue-sonner'
 
@@ -26,6 +26,31 @@ const open = ref(false)
 const openDetail = ref(false)
 const selectedId = ref<number | null>(null)
 const pendingCancelId = ref<number | null>(null)
+
+function showToast(type: 'success' | 'error', message: string) {
+  toast.custom(
+    () =>
+      h(
+        'div',
+        { class: 'mx-auto w-[92vw] max-w-[520px] rounded-xl border bg-background/95 backdrop-blur px-4 py-3 shadow-2xl ring-1 ring-black/5' },
+        [
+          h('p', { class: `text-center text-sm font-medium ${type === 'success' ? 'text-emerald-600' : 'text-red-600'}` }, message),
+        ],
+      ),
+    { position: 'top-center', duration: 2800 },
+  )
+}
+
+async function invalidateAll() {
+  await Promise.all([
+    qc.invalidateQueries({ queryKey: ['vendas'] }),
+    qc.invalidateQueries({ queryKey: ['vendas', 'list'] }),
+    qc.invalidateQueries({ queryKey: ['vendas', 'byId'] as any }),
+    qc.invalidateQueries({ queryKey: ['produtos'] }),
+    qc.invalidateQueries({ queryKey: ['produtos', 'options'] }),
+    qc.invalidateQueries({ queryKey: ['compras'] }),
+  ])
+}
 
 const vendasQ = useQuery<VendaRow[]>({
   queryKey: ['vendas', 'list'],
@@ -81,12 +106,12 @@ const detalhePending = computed(() => vendaDetalheQ.status.value === 'pending')
 
 watchEffect(() => {
   if (vendasQ.isError.value && (!vendasQ.data?.value || vendasQ.data?.value.length === 0)) {
-    toast.error((vendasQ.error.value as any)?.message || 'Falha ao carregar vendas', { position: 'top-center' })
+    showToast('error', (vendasQ.error.value as any)?.message || 'Falha ao carregar vendas')
   }
 })
 watchEffect(() => {
   if (vendaDetalheQ.isError.value) {
-    toast.error((vendaDetalheQ.error.value as any)?.message || 'Falha ao carregar venda', { position: 'top-center' })
+    showToast('error', (vendaDetalheQ.error.value as any)?.message || 'Falha ao carregar venda')
   }
 })
 watchEffect(() => { if (!openDetail.value) selectedId.value = null })
@@ -127,7 +152,7 @@ const modalBodyRef = ref<HTMLElement | null>(null)
 const { mutateAsync: createRun, isPending: createPending, reset: resetCreate } = useMutation({
   mutationFn: (payload: NovaVenda) => criarVenda(payload),
   onSuccess: async (res: any) => {
-    toast.success(res?.message || 'Venda registrada', { position: 'top-center' })
+    showToast('success', res?.message || 'Venda registrada')
     open.value = false
     form.cliente = ''
     form.produtos = []
@@ -136,8 +161,7 @@ const { mutateAsync: createRun, isPending: createPending, reset: resetCreate } =
     delete formErrors.general
     apiError.value = ''
     resetCreate()
-    await qc.invalidateQueries({ queryKey: ['vendas', 'list'] })
-    await qc.invalidateQueries({ queryKey: ['produtos'] })
+    await invalidateAll()
   },
   onError: async (e: any) => {
     const data = e?.response?.data
@@ -168,6 +192,7 @@ const { mutateAsync: createRun, isPending: createPending, reset: resetCreate } =
     resetCreate()
     await nextTick()
     modalBodyRef.value?.scrollTo({ top: 0, behavior: 'smooth' })
+    showToast('error', apiError.value || formErrors.general || 'Erro ao registrar venda')
   },
 })
 
@@ -178,14 +203,15 @@ const cancelMutation = useMutation({
   onMutate: (id) => (pendingCancelId.value = id),
   onSettled: () => (pendingCancelId.value = null),
   onSuccess: async (res: any) => {
-    toast.success(res?.message || 'Venda cancelada', { position: 'top-center' })
-    await qc.invalidateQueries({ queryKey: ['vendas', 'list'] })
-    await qc.invalidateQueries({ queryKey: ['produtos'] })
+    showToast('success', res?.message || 'Venda cancelada')
+    await invalidateAll()
     if (selectedId.value) await qc.invalidateQueries({ queryKey: ['vendas', 'byId', selectedId.value] })
     confirmOpen.value = false
     vendaToCancel.value = null
   },
-  onError: (e: any) => { toast.error(e?.response?.data?.message || 'Erro ao cancelar venda', { position: 'top-center' }) },
+  onError: (e: any) => {
+    showToast('error', e?.response?.data?.message || 'Erro ao cancelar venda')
+  },
 })
 
 function validateLocal(): boolean {

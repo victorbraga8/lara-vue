@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, ref, watch, h } from 'vue'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query'
 import { toast } from 'vue-sonner'
 import { listarProdutos, criarProduto, type Produto, type NovoProduto } from '@/services/produtos'
@@ -15,13 +15,33 @@ import { Loader2, RefreshCw, Plus } from 'lucide-vue-next'
 const open = ref(false)
 const qc = useQueryClient()
 
+function showToast(type: 'success' | 'error', message: string) {
+  toast.custom(
+    () =>
+      h(
+        'div',
+        { class: 'mx-auto w-[92vw] max-w-[520px] rounded-xl border bg-background/95 backdrop-blur px-4 py-3 shadow-2xl ring-1 ring-black/5' },
+        [h('p', { class: `text-center text-sm font-medium ${type === 'success' ? 'text-emerald-600' : 'text-red-600'}` }, message)],
+      ),
+    { position: 'top-center', duration: 2800 },
+  )
+}
+
+async function invalidateAllProducts() {
+  await Promise.all([
+    qc.invalidateQueries({ queryKey: ['produtos'] }),
+    qc.invalidateQueries({ queryKey: ['produtos', 'list'] }),
+    qc.invalidateQueries({ queryKey: ['produtos', 'options'] }),
+  ])
+}
+
 const { data, isLoading, isFetching, refetch, error } = useQuery<Produto[]>({
   queryKey: ['produtos', 'list'],
   queryFn: listarProdutos,
 })
 
 if (error.value) {
-  toast.error(error.value?.message || 'Falha ao carregar produtos', { position: 'top-center' })
+  showToast('error', error.value?.message || 'Falha ao carregar produtos')
 }
 
 const produtos = computed<Produto[]>(() => data?.value ?? [])
@@ -57,10 +77,10 @@ watch(() => form.value.estoque, () => clearError('estoque'))
 const { mutateAsync: createProduct, isPending } = useMutation({
   mutationFn: (payload: NovoProduto) => criarProduto(payload),
   onSuccess: async (res: any) => {
-    toast.success(res?.message || 'Produto cadastrado', { position: 'top-center' })
+    showToast('success', res?.message || 'Produto cadastrado')
     open.value = false
     resetForm()
-    await qc.invalidateQueries({ queryKey: ['produtos', 'list'] })
+    await invalidateAllProducts()
   },
   onError: (e: any) => {
     const msg = e?.response?.data?.message || 'Erro ao cadastrar produto'
@@ -72,6 +92,7 @@ const { mutateAsync: createProduct, isPending } = useMutation({
       custo_medio: Array.isArray(errs?.custo_medio) ? errs.custo_medio[0] : '',
       estoque: Array.isArray(errs?.estoque) ? errs.estoque[0] : '',
     }
+    showToast('error', msg)
   },
 })
 
@@ -153,7 +174,6 @@ function money(n: number | string) {
                 </p>
               </div>
 
-              <!-- UM POR LINHA (sempre) -->
               <div class="grid grid-cols-1 gap-4">
                 <div class="grid gap-2">
                   <Label for="preco_venda">Preço de venda</Label>
@@ -220,7 +240,6 @@ function money(n: number | string) {
         <CardTitle class="text-base">Lista de produtos</CardTitle>
       </CardHeader>
       <CardContent>
-        <!-- MOBILE: cards -->
         <div class="grid gap-3 sm:hidden">
           <template v-if="isLoading || isFetching">
             <div v-for="i in 6" :key="'skel-m-'+i" class="rounded-lg border p-3">
@@ -257,7 +276,6 @@ function money(n: number | string) {
           </div>
         </div>
 
-        <!-- DESKTOP: tabela -->
         <div class="hidden sm:block overflow-x-auto">
           <Table>
             <TableHeader>
